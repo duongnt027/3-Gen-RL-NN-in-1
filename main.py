@@ -101,7 +101,7 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
 # PREPARING DATASET
 # Change it with the output of 0_download_dataset.py
 DATASET_NPZ_DIR = "/usr/local/lib/python3.11/dist-packages/adbench/datasets"
-DATASET_JSON_DIR = "adbench_ds/json"
+DATASET_JSON_DIR = "./adbench_ds/json"
 
 with open(f"{DATASET_JSON_DIR}/datasets_files_name.json", "r") as file:
     dataset_trees = json.load(file)
