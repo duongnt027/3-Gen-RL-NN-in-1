@@ -9,100 +9,127 @@ from torch.distributions import MultivariateNormal, Normal
 from utils import tensor_pop
 
 class AnorEnv:
-    def __init__(self, dataset, generator, detector, shuffle=True, device="cpu"):
-        self.device = device
+    # Khởi tạo môi trường học từ dataset
+    # Đầu vào là dataset (Dataset), mô hính tạo sinh (nn.Module), mô hình phân biệt (nn.Module), shuffle (True-False)
+    def __init__(self, dataset, generator, detector, shuffle=True):
+        # Thiết lập device theo phần cứng của máy
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
-        # Get all data from dataset
-        self.X = dataset.X.to(device)
-        self.y = dataset.y.to(device)
+        # Lấy dữ liệu X, y từ dataset, lưu trên device
+        self.X = dataset.X.to(self.device)
+        self.y = dataset.y.to(self.device)
         
+        # Trộn dữ liệu X, y
         if shuffle:
             indices = torch.randperm(len(self.X))
             self.X = self.X[indices]
             self.y = self.y[indices]
 
+        # Định nghĩa mô hình tạo sinh, mô hình phát hiện
         self.generator = generator
         self.detector = detector
         
+        # Định nghĩa không gian quan sát và không gian hành động bằng các tensor zero dựa trên các chiều (Thực ra có thể định nghĩa chiều của các không gian luôn)
         # Define observation and action space dimensions
-        self.observation_space = torch.zeros(generator.in_dim)  # Same as input dimension
-        self.action_space = torch.zeros(2)  # [mu, sigma] for sampling
+        self.observation_space = torch.zeros(generator.in_dim)  # shape (generator.in_dim, )
+        self.action_space = torch.zeros(2)  # [mu, sigma] để thay đổi biến, shape (2, )
         
+        # Định nghĩa states, buffer_x giống self.X nhưng không chung địa chỉ
+        self.indices = torch.nonzero(self.X == 1, as_tuple=True)[0]
+        self.states = self.X.clone()
+        self.buffer_X = self.X.clone()
+
+        # Định nghĩa 
+        # current state là trạng thái quan sát lúc này (dữ liệu X từ dataset), 
+        # current step là số bước hiện tại của quá trình tương tác với môi trường, 
+        # max_step là số lượng ban đầu của X
         self.current_state = None
         self.current_step = 0
-        self.max_steps = len(self.X)
+        self.max_steps = len(self.indices)
         
-        # Keep track of available states and generated buffer
-        self.states = self.X.clone()
-        self.buffer_X = self.X.clone()
-
+    # Reset lại các thông số của môi trường về trạng thái ban đầu
     def reset(self):
         self.current_step = 0
+        self.indices = torch.nonzero(self.X == 1, as_tuple=True)[0]
         self.states = self.X.clone()
         self.buffer_X = self.X.clone()
         
-        if self.states.shape[0] > 0:
-            idx = random.randint(0, self.states.shape[0] - 1)
-            self.current_state, self.states = tensor_pop(self.states, idx)
-        else:
-            self.current_state = torch.randn(self.X.shape[1]).to(self.device)
+        # Khởi tạo lại current_state và indices từ đầu, current_state là 1 random có y bằng 1 từ X
+        idx = random.randint(0, self.indices.shape[0] - 1)
+        current_idx, self.indices = tensor_pop(self.indices, idx)
+
+        self.current_state = self.X[current_idx].to(self.device)
+
+        # Thông tin của môi trường
+        self.info = {
+            "current_step": 0,
+            "current_index": current_idx,
+            "added_to_buffer": False,
+            "terminated": False,
+            "truncated": False
+        }
             
-        return self.current_state, {}
+        return self.current_state, self.info
 
     def step(self, action):
+        # Tăng bước tương tác với môi trường
         self.current_step += 1
         
-        terminated = False
-        truncated = False
-        info = {}
+        # Định nghĩa tín hiệu dừng
+        terminated = False # dừng theo môi trường
+        truncated = False # dừng theo điều kiện
 
+        # Đảm bảo action luôn là 1 tensor lưu theo device
         action = torch.tensor(action)
+        action = action.to(self.device)
 
-        # Action contains [mu, sigma] for normal distribution
-        mu, sigma = action[0], torch.abs(action[1]) + 1e-6  # Ensure sigma > 0
+        # action chứa mean, sigma của 1 phân phối chuẩn
+        mu, sigma = action[0], torch.abs(action[1]) + 1e-6  # đảm bảo sigma > 0
         
-        # Encode current state to latent space
+        # Chuẩn bị current_state trước khi encode
         current_state_batch = self.current_state.unsqueeze(0)
         y_batch = torch.tensor([[1.0]], dtype=torch.float32).to(self.device)
         
+        # Encode current_state để lấy latent vector
         with torch.no_grad():
             mean_z, logvar_z = self.generator.encode(current_state_batch, y_batch)
-            # print(mean_z, logvar_z)
             z = self.generator.reparameterize(mean_z, logvar_z)
-        # print(z)
-        # Sample perturbation in latent space
+        
+        # Tạo delta từ mean, sigma của action và thay đổi latent vector cũ thành vector mới
         dist = Normal(mu, sigma)
         delta = dist.sample(z.shape).to(self.device)
         z_new = z + delta
         
-        # Decode to get new sample
+        # Tạo dữ liệu mới từ latent vector
         with torch.no_grad():
             x_new = self.generator.decode(z_new, y_batch)
         
-        # Calculate reward
+        # Tính reward của latent vector
         reward = self._calculate_reward(x_new.squeeze(0))
         
-        # Check termination conditions
-        if self.states.shape[0] == 0:
+        # Hủy theo môi trường nếu không còn dữ liệu khả thi
+        if self.X.shape[0] == 0:
             terminated = True
         
+        # Hủy theo điều kiện nếu current_step vượt quá số lượng dữ liệu có thể sử dụng
         if self.current_step >= self.max_steps:
             truncated = True
             
-        # Check if generated sample is feasible and add to buffer
-        # if self._check_feasible(x_new.squeeze(0)):
-        if True:
-            self.buffer_X = torch.cat([self.buffer_X, x_new], dim=0)
-            info['added_to_buffer'] = True
-        else:
-            info['added_to_buffer'] = False
+        # Thêm dữ liệu mới vào buffer X
+        self.buffer_X = torch.cat([self.buffer_X, x_new], dim=0)
+        self.info['added_to_buffer'] = True
+        self.info['current_step'] = self.current_step
+        self.info['terminated'] = terminated
+        self.info['truncated'] = truncated
         
-        # Get next state
+        # Nếu chưa gặp tín hiệu hủy, lấy state mới
         if not terminated and self.states.shape[0] > 0:
-            idx = random.randint(0, self.states.shape[0] - 1)
-            self.current_state, self.states = tensor_pop(self.states, idx)
+            idx = random.randint(0, self.indices.shape[0] - 1)
+            current_idx, self.indices = tensor_pop(self.indices, idx)
+            self.current_state = self.X[current_idx].to(self.device)
+            self.info['current_index'] = current_idx
         
-        return x_new.squeeze(0), reward, terminated, truncated, info
+        return x_new.squeeze(0), reward, terminated, truncated, self.info
 
     def _calculate_reward(self, x):
         # Calculate reward = diversity - detector_prob
@@ -147,48 +174,61 @@ class GenPPO:
     def __init__(self, actor_net, critic_net, env, **hyperparameters):
         self._init_hyperparameters(hyperparameters)
         
+        # Định nghĩa môi trường, chiều của điểm quan sát, chiều của hành động
         self.env = env
         self.observation_dim = env.observation_space.shape[0]
         self.action_dim = env.action_space.shape[0]
 
-        # Set device first
+        # Khai báo device cuda nếu có
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
+        # Khai báo mạng chính sách (actor), mạng đánh giá (critic)
         self.actor_net = actor_net
         self.actor_net = self.actor_net.to(self.device)
         self.critic_net = critic_net
         self.critic_net = self.critic_net.to(self.device)
 
+        # Khai báo hàm tối ưu
         self.actor_optim = Adam(self.actor_net.parameters(), lr=self.lr)
         self.critic_optim = Adam(self.critic_net.parameters(), lr=self.lr)
 
-        # Covariance matrix for action sampling
+        # Định nghĩa ma trận hiệp phương sai
         self.cov_var = torch.full(size=(self.action_dim,), fill_value=0.5, device=self.device)
         self.cov_mat = torch.diag(self.cov_var)
 
+    # Hàm lấy giá trị từ điểm quan sát
     def get_action(self, observation):
+        # Đảm bảo điểm quan sát là tensor lưu trên device
         if isinstance(observation, np.ndarray):
             observation = torch.tensor(observation, dtype=torch.float32, device=self.device)
         else:
             observation = observation.to(self.device)
 
+        # Lấy đầu ra của mạng actor là mean, sigma
         mean_sigma = self.actor_net(observation)
+        # Tạo phân phối chuẩn đa biến
         dist = MultivariateNormal(mean_sigma, self.cov_mat)
+        # Tạo 1 hành động ngẫu nhiên trong phân phối chuẩn
         action = dist.sample()
+        # Tính log_prob của phân phối đó
         log_prob = dist.log_prob(action)
 
         return action.cpu().detach().numpy(), log_prob.detach()
-        
+
+    # Khởi tạo các hyperparameter        
     def _init_hyperparameters(self, hyperparameters):
         # Default hyperparameters
-        self.timesteps_per_batch = 2048        
-        self.max_timesteps_per_episode = 200   
+        # Bước chạy 1 batch
+        self.timesteps_per_batch = 600
+        # Bước chạy tối đa của 1 ep
+        self.max_timesteps_per_episode = 200
+        # Số lần update lại mạng
         self.n_updates_per_iteration = 10      
         self.lr = 3e-4                         
         self.gamma = 0.99                      
         self.clip = 0.2                        
-        self.render = False                    
-        self.render_every_i = 10              
+        # self.render = False                    
+        # self.render_every_i = 10              
         self.save_freq = 10                   
         self.seed = None            
         

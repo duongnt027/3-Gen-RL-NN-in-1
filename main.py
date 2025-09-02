@@ -45,7 +45,7 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
         # report_generator(model_cvae, test_ds, device)
         
         # Initialize RL environment and agent
-        rl_env = AnorEnv(train_ds, model_cvae, model_detector, device=device)
+        rl_env = AnorEnv(train_ds, model_cvae, model_detector)
         
         # Create PPO networks
         actor_net = BaseNet(in_dim, 2, clamp=2.0)  # Output [mu, sigma]
@@ -86,12 +86,12 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
         detector_report = report_detector(model_detector, test_ds, device)
         
         # Update RL environment with new detector
-        rl_env = AnorEnv(train_ds, model_cvae, model_detector, device=device)
+        rl_env = AnorEnv(train_ds, model_cvae, model_detector)
         model_ppo.env = rl_env
         
         # Train RL agent
         print("Training RL agent...")
-        model_ppo.learn(total_timesteps=1000)
+        model_ppo.learn(total_timesteps=60000)
         
         print(f"Dataset size after episode {ep + 1}: {len(train_ds)}")
 
