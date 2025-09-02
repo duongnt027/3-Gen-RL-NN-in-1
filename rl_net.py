@@ -35,6 +35,7 @@ class AnorEnv:
         self.action_space = torch.zeros(2)  # [mu, sigma] để thay đổi biến, shape (2, )
         
         # Định nghĩa states, buffer_x giống self.X nhưng không chung địa chỉ
+        # print(self.y)
         self.indices = torch.nonzero(self.y == 1, as_tuple=True)[0]
         self.states = self.X.clone()
         self.buffer_X = self.X.clone()
@@ -50,7 +51,7 @@ class AnorEnv:
     # Reset lại các thông số của môi trường về trạng thái ban đầu
     def reset(self):
         self.current_step = 0
-        self.indices = torch.nonzero(self.X == 1, as_tuple=True)[0]
+        self.indices = torch.nonzero(self.y == 1, as_tuple=True)[0]
         self.states = self.X.clone()
         self.buffer_X = self.X.clone()
         
