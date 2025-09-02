@@ -51,6 +51,7 @@ class AnorEnv:
     def reset(self):
         self.current_step = 0
         self.indices = torch.nonzero(self.X == 1, as_tuple=True)[0]
+        print(self.indices)
         self.states = self.X.clone()
         self.buffer_X = self.X.clone()
         
