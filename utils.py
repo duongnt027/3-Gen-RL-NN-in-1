@@ -37,7 +37,6 @@ def report_generator(model, test_ds, device="cpu"):
 def report_detector(model, test_ds, device="cpu"):
     model.eval()
     test_loader = DataLoader(test_ds, batch_size=1, shuffle=False)
-    # print(len(test_ds))
     
     all_preds = []
     all_labels = []
@@ -47,9 +46,9 @@ def report_detector(model, test_ds, device="cpu"):
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
             
-            y_pred = model.forward(x_batch).squeeze()
-            all_preds.append(y_pred.cpu())
-            all_labels.append(y_batch.cpu())
+            y_pred = model(x_batch)
+            all_preds.append(y_pred.view(-1).cpu())
+            all_labels.append(y_batch.view(-1).cpu())
     
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
