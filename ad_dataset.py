@@ -25,7 +25,7 @@ class AnorDataset(Dataset):
         X_anor = self.X[self.y == 1]
         X_nor = self.X[self.y == 0]
         
-        if X_anor.shape[0] > X_nor.shape[0] or not test_dataset:
+        if X_anor.shape[0] > X_nor.shape[0] or test_dataset:
             self.X_cur = self.X
             self.y_cur = self.y
             return True
