@@ -36,8 +36,9 @@ def report_generator(model, test_ds, device="cpu"):
 
 def report_detector(model, test_ds, device="cpu"):
     model.eval()
+    # len(test_ds)
     test_loader = DataLoader(test_ds, batch_size=1, shuffle=False)
-    
+    print(len(test_ds))
     all_preds = []
     all_labels = []
     
