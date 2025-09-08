@@ -2,12 +2,13 @@ from torch.utils.data import Dataset
 import torch
 
 class AnorDataset(Dataset):
-    def __init__(self, X: torch.Tensor, y: torch.Tensor):
+    def __init__(self, X: torch.Tensor, y: torch.Tensor, test_dataset=False):
         self.X = X
         self.y = y
         self.X_cur = None
         self.y_cur = None
-        self.balance_fn()
+        if not test_dataset:
+            self.balance_fn()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def __len__(self):

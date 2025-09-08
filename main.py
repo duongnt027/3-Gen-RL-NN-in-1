@@ -20,10 +20,9 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
     
     # Create datasets
     train_ds = AnorDataset(X_train, y_train)
-    test_ds = AnorDataset(X_test, y_test)
+    test_ds = AnorDataset(X_test, y_test, test_dataset=True)
     print(X_test.shape[0])
     print(f"Prepared Test datase with size {len(test_ds)}")
-    
     print("Starting training loop...")
     
     for ep in range(episodes):
