@@ -21,11 +21,11 @@ class AnorDataset(Dataset):
         y = self.y_cur[idx]
         return x, y
 
-    def balance_fn(self):
+    def balance_fn(self, test_dataset=False):
         X_anor = self.X[self.y == 1]
         X_nor = self.X[self.y == 0]
         
-        if X_anor.shape[0] > X_nor.shape[0]:
+        if X_anor.shape[0] > X_nor.shape[0] or not test_dataset:
             self.X_cur = self.X
             self.y_cur = self.y
             return True
