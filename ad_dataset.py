@@ -7,8 +7,7 @@ class AnorDataset(Dataset):
         self.y = y
         self.X_cur = None
         self.y_cur = None
-        if not test_dataset:
-            self.balance_fn()
+        self.balance_fn(test_dataset)
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     def __len__(self):
