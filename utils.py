@@ -37,7 +37,6 @@ def report_generator(model, test_ds, device="cpu"):
 def report_detector(model, test_ds, device="cpu"):
     model.eval()
     test_loader = DataLoader(test_ds, batch_size=1, shuffle=False)
-    print("Số mẫu trong test_ds:", len(test_ds))
     
     all_preds = []
     all_labels = []
@@ -47,32 +46,20 @@ def report_detector(model, test_ds, device="cpu"):
             x_batch = x_batch.to(device)
             y_batch = y_batch.to(device)
             
-            # Không dùng squeeze để tránh mất mẫu
             y_pred = model(x_batch)
-            
-            # Đảm bảo giữ dimension
             all_preds.append(y_pred.view(-1).cpu())
             all_labels.append(y_batch.view(-1).cpu())
     
-    # Ghép lại thành tensor 1D
     all_preds = torch.cat(all_preds)
     all_labels = torch.cat(all_labels)
     
-    print("Tổng số dự đoán:", all_preds.shape[0])
-    print("Tổng số nhãn:", all_labels.shape[0])
-    
-    # Chuyển sang nhị phân
     pred_binary = (all_preds > 0.5).float()
     
-    accuracy = (pred_binary == all_labels).float().mean().item()
-    
-    # Debug phân bố nhãn
-    unique, counts = torch.unique(all_labels, return_counts=True)
-    print("Phân bố nhãn trong test set:", dict(zip(unique.tolist(), counts.tolist())))
+    accuracy = (pred_binary == all_labels).float().mean()
     
     y_true = all_labels.numpy().astype(int)
     y_pred = pred_binary.numpy().astype(int)
-    
+        
     print("=" * 60)
     print("DETECTOR PERFORMANCE REPORT")
     print("=" * 60)
