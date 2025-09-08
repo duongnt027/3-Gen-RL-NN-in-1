@@ -252,8 +252,8 @@ class GenPPO:
         batch_lens = []
 
         t = 0  # Timesteps run so far this batch
-        print(self.timesteps_per_batch)
-        print(t)
+        # print(self.timesteps_per_batch)
+        # print(t)
         
         while t < self.timesteps_per_batch:
             ep_rews = []
