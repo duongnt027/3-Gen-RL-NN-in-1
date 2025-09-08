@@ -132,6 +132,7 @@ y_train, y_test = y
 print("Splitted dataset!")
 print(f"Train size: {X_train.shape[0]}")
 print(f"Test size: {X_test.shape[0]}")
+
 X_train = X_train.to(device)
 X_test = X_test.to(device)
 y_train = y_train.to(device)
