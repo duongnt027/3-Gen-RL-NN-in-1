@@ -70,8 +70,7 @@ def report_detector(model, test_ds, device="cpu"):
     report = classification_report(y_true, y_pred, 
                                  target_names=target_names, 
                                  digits=4,
-                                 zero_division=0,
-                                 output_dict=True)
+                                 zero_division=0)
     print("Classification Report:")
     print(report)
     print()
