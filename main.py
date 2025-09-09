@@ -7,7 +7,7 @@ from utils import split_dataset, report_detector
 from ad_dataset import AnorDataset
 from rl_net import AnorEnv, GenPPO
 from gen_net import CVae
-from nn_net import SimpleDetector, BaseNet
+from nn_net import SimpleDetector, BaseNet, TransformerDetector
 
 def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100, device="cpu"):
     """Main training loop implementing the algorithm"""
@@ -15,7 +15,7 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
     # Initialize models
     in_dim = X_train.shape[1]
     model_cvae = CVae(in_dim=in_dim, device=device)
-    model_detector = SimpleDetector(in_dim=in_dim, device=device)
+    model_detector = TransformerDetector(input_size=in_dim, device=device)
     model_ppo = None
     
     # Create datasets
