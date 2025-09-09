@@ -15,7 +15,7 @@ def main_training_loop(X_train, y_train, X_test, y_test, episodes=10, k_new=100,
     # Initialize models
     in_dim = X_train.shape[1]
     model_cvae = CVae(in_dim=in_dim, device=device)
-    model_detector = TransformerDetector(input_size=in_dim, device=device)
+    model_detector = SimpleDetector(in_dim=in_dim, device=device)
     model_ppo = None
     
     # Create datasets
@@ -145,7 +145,7 @@ y_test = y_test.to(device)
 # Run training
 model_cvae, model_detector, model_ppo = main_training_loop(
     X_train, y_train, X_test, y_test,
-    episodes=5,
+    episodes=10,
     k_new=50,
     device=device
 )

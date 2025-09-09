@@ -13,7 +13,6 @@ def tensor_pop(tensor: torch.Tensor, index: int) -> Tuple[torch.Tensor, torch.Te
     remaining = torch.cat([tensor[:index], tensor[index+1:]], dim=0)
     return element.squeeze(0), remaining
 
-
 def report_generator(model, test_ds, device="cpu"):
     """Evaluate VAE reconstruction quality"""
     model.eval()
@@ -32,7 +31,6 @@ def report_generator(model, test_ds, device="cpu"):
     avg_loss = total_loss / len(test_loader)
     print(f"VAE Test Loss: {avg_loss:.4f}")
     return avg_loss
-
 
 def report_detector(model, test_ds, device="cpu"):
     model.eval()

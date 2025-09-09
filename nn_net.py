@@ -22,6 +22,7 @@ class BaseNet(nn.Module):
 
         return output
     
+    
 class SimpleDetector(nn.Module):
     def __init__(self, in_dim: int, dropout: float = 0.2, device: str = None):
         super().__init__()
@@ -156,6 +157,7 @@ class TransformerDetector(nn.Module):
         x = self.transformer_encoder(x)     # (B, L, d_model)
         x = x.mean(dim=1)                   # (B, d_model)
         return self.fc(x)                   # (B, 1)
+    
     def optimizer_fn(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
