@@ -143,14 +143,19 @@ class TransformerDetector(nn.Module):
         self.to(self.device)
 
     def forward(self, x):
+        # Input có thể là:
+        # (B, input_size) -> thêm chiều sequence
+        # (B, L, input_size) -> giữ nguyên
         if x.dim() == 2:
             x = x.unsqueeze(1)  # (B, 1, input_size)
-        x = self.embedding(x)
-        x = self.positional_encoding(x)
-        x = self.transformer_encoder(x)
-        x = x.mean(dim=1)  # average pooling
-        return self.fc(x)
+        elif x.dim() == 1:
+            x = x.unsqueeze(0).unsqueeze(0)  # (1, 1, input_size)
 
+        x = self.embedding(x)               # (B, L, d_model)
+        x = self.positional_encoding(x)     # (B, L, d_model)
+        x = self.transformer_encoder(x)     # (B, L, d_model)
+        x = x.mean(dim=1)                   # (B, d_model)
+        return self.fc(x)                   # (B, 1)
     def optimizer_fn(self):
         return torch.optim.Adam(self.parameters(), lr=1e-3)
 
