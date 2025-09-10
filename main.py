@@ -111,10 +111,10 @@ with open(f"./datasets_files_name.json", "r") as file:
 dataset_trees.pop("CV_by_ViT")
 dataset_trees.pop("NLP_by_RoBERTa")
 
-ds_type = "CV_by_ResNet18"
-ds_name = "CIFAR10_1"
-# ds_type = "Classical"
-# ds_name = "7_Cardiotocography"
+# ds_type = "CV_by_ResNet18"
+# ds_name = "CIFAR10_1"
+ds_type = "Classical"
+ds_name = "7_Cardiotocography"
 
 ds_npz = dict(np.load(f"{DATASET_NPZ_DIR}/{ds_type}/{ds_name}.npz"))
 
@@ -145,7 +145,7 @@ y_test = y_test.to(device)
 # Run training
 model_cvae, model_detector, model_ppo = main_training_loop(
     X_train, y_train, X_test, y_test,
-    episodes=10,
+    episodes=5,
     k_new=50,
     device=device
 )
